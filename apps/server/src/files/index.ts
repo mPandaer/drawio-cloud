@@ -4,7 +4,7 @@ import type { FilesDependencies, FilesModule, ModuleContext, Identity, Transacti
 import { ApiError } from '../errors.js';
 import { validateDocument } from './document.js';
 
-const blank = '<mxfile><diagram name="Page-1"><mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/></root></mxGraphModel></diagram></mxfile>';
+const blank = '<mxfile><diagram name="Page-1"><mxGraphModel grid="0" page="0"><root><mxCell id="0"/><mxCell id="1" parent="0"/></root></mxGraphModel></diagram></mxfile>';
 type Row = { id: string; owner_id: string; owner_username: string; name: string; blob_key: string; revision: number; size: number; created_at: number; updated_at: number };
 const metadata = (row: Row): DrawingFile => ({ id: row.id, ownerId: row.owner_id, ownerUsername: row.owner_username, name: row.name, revision: row.revision, size: row.size, createdAt: row.created_at, updatedAt: row.updated_at });
 export function createFilesModule(context: ModuleContext, dependencies: FilesDependencies): FilesModule {

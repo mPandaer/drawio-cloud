@@ -391,5 +391,5 @@ test('正式API新建文件并读取完整空白原生文档', async () => {
   expect(file).toMatchObject({ name: 'Architecture.drawio', ownerId: auth.user.id, ownerUsername: 'admin', revision: 1 });
   const read = await app.inject({ url: `/api/files/${file.id}/content`, headers });
   expect(read.statusCode).toBe(200);
-  expect(read.json()).toEqual({ file, content: '<mxfile><diagram name="Page-1"><mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/></root></mxGraphModel></diagram></mxfile>' });
+  expect(read.json()).toEqual({ file, content: '<mxfile><diagram name="Page-1"><mxGraphModel grid="0" page="0"><root><mxCell id="0"/><mxCell id="1" parent="0"/></root></mxGraphModel></diagram></mxfile>' });
 });
