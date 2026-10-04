@@ -1,0 +1,3 @@
+[submodule "vendor/drawio"]
+	path = vendor/drawio
+	url = https://github.com/mPandaer/drawio-editor.git
