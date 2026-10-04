@@ -134,6 +134,7 @@ export const createEditorBridge: CreateEditorBridge = options => {
       initialized = true;
       options.editorWindow.postMessage(JSON.stringify({
         action: 'load', xml: content, autosave: 1, saveAndExit: '0',
+        noSaveBtn: 1, noExitBtn: 1,
       }), options.editorOrigin);
       return;
     }

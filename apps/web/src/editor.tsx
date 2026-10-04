@@ -29,6 +29,21 @@ export function EditorPage({ api, file, onLeave, onSwitch }: { api: ApiClient; f
   const active = useRef(true);
   const leaving = useRef(false);
   const localContent = useRef('');
+  const resumeKey = `drawio-edit-lease:${file.id}`;
+  const rememberLease = (value?: LeaseResponse) => {
+    try {
+      if (value) sessionStorage.setItem(resumeKey, JSON.stringify(value));
+      else sessionStorage.removeItem(resumeKey);
+    } catch { /* Editing still works when browser storage is unavailable. */ }
+  };
+  const previousLease = (): LeaseResponse | undefined => {
+    try {
+      const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
+      if (navigation?.type !== 'reload') { rememberLease(); return undefined; }
+      const value = JSON.parse(sessionStorage.getItem(resumeKey) ?? 'null');
+      return typeof value?.windowId === 'string' && typeof value?.leaseToken === 'string' ? value : undefined;
+    } catch { return undefined; }
+  };
   const stopRenewal = () => { clearInterval(renewTimer.current); renewTimer.current = undefined; };
   const fail = (e: unknown) => {
     if (!active.current) return;
@@ -40,6 +55,7 @@ export function EditorPage({ api, file, onLeave, onSwitch }: { api: ApiClient; f
     if (bridge.current) { localContent.current = bridge.current.currentContent(); bridge.current.dispose(); bridge.current = undefined; }
     const held = lease.current; lease.current = undefined;
     if (held) await held.release().catch(e => { if (!(e instanceof ClientError && terminal.has(e.code))) throw e; });
+    rememberLease();
   }
   async function leave(discard = false) {
     if (leaving.current) return;
@@ -56,8 +72,14 @@ export function EditorPage({ api, file, onLeave, onSwitch }: { api: ApiClient; f
     void (async () => {
       let acquired: LeaseResponse | undefined;
       try {
-        acquired = await api.acquire(file.id, windowId);
+        try { acquired = await api.acquire(file.id, windowId, previousLease()); }
+        catch (e) {
+          if (!(e instanceof ClientError && e.code === 'LEASE_LOST')) throw e;
+          rememberLease();
+          acquired = await api.acquire(file.id, windowId);
+        }
         if (cancelled) { await api.release(file.id, acquired); return; }
+        rememberLease(acquired);
         lease.current = createEditingLease(api, file.id, acquired);
         const content = await api.content(file.id);
         if (cancelled) return;
@@ -96,6 +118,7 @@ export function EditorPage({ api, file, onLeave, onSwitch }: { api: ApiClient; f
       renewing = true;
       void held.renew().then(result => {
         if (bridge.current !== current) return;
+        rememberLease(result);
         current.updateLease(result.expiresAt);
       }, e => {
         if (bridge.current !== current) return;
@@ -120,7 +143,23 @@ export function EditorPage({ api, file, onLeave, onSwitch }: { api: ApiClient; f
   }
   const url = new URL('/editor/index.html', window.location.origin);
   url.search = 'embed=1&proto=json&keepmodified=1&lang=zh&ui=kennedy&pwa=0';
-  return <div className="editor-shell"><header><button disabled={busy} onClick={() => void leave()}>返回文件列表</button><strong>{file.name}</strong><span role="status" className={`save-status ${status}`}>{opened ? statusText[status] : '尚未进入编辑'}</span><div className="actions">{opened && <><button disabled={busy} onClick={() => { setBusy(true); void bridge.current?.flush().catch(fail).finally(() => setBusy(false)); }}>立即保存</button><button onClick={() => downloadContent(bridge.current?.currentContent() ?? localContent.current, file.name)}>下载当前内容</button></>}</div></header>
+  return <div className="editor-shell"><header className="editor-header">
+    <button className="editor-back" aria-label="返回文件列表" disabled={busy} onClick={() => void leave()}>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6" /></svg>文件列表
+    </button>
+    <div className="editor-document">
+      <strong title={file.name}>{file.name}</strong>
+      <span role="status" className={`save-status ${status}`}>{opened ? statusText[status] : '尚未进入编辑'}</span>
+    </div>
+    {opened && <div className="editor-actions">
+      <button aria-label="立即保存" title="立即保存" disabled={busy} onClick={() => { setBusy(true); void bridge.current?.flush().catch(fail).finally(() => setBusy(false)); }}>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h12l4 4v12a2 2 0 0 1-2 2Z" /><path d="M7 3v6h10V3M7 21v-8h10v8" /></svg>保存
+      </button>
+      <button aria-label="下载当前内容" title="下载当前内容" onClick={() => downloadContent(bridge.current?.currentContent() ?? localContent.current, file.name)}>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 16v4h14v-4" /></svg>下载
+      </button>
+    </div>}
+  </header>
     {error && <div className="editor-alert" role="alert">{error}{code === 'REVISION_CONFLICT' && <div className="actions"><button disabled={busy} onClick={() => void reload()}>重新加载服务器版本</button><button disabled={busy} onClick={() => setSaveAs(true)}>另存为新文件</button></div>}{['DOCUMENT_TOO_LARGE', 'REQUEST_TOO_LARGE'].includes(code) && <><p>服务器未接受本次修改。请下载当前内容，或缩小文档后另存为新文件。</p><button disabled={busy} onClick={() => setSaveAs(true)}>另存为新文件</button></>}</div>}
     {opened ? <iframe key={`${file.id}-${attempt}`} ref={attach} title="draw.io 绘图编辑器" src={url.href} /> : <main className="editor-wait"><h1>{code === 'FILE_OCCUPIED' ? '文件正在使用中' : '正在准备编辑器'}</h1><p>{code === 'FILE_OCCUPIED' ? '该文件已在另一个窗口打开，目前只支持单窗口编辑。请先关闭原窗口，或等待编辑锁到期。' : '取得独占编辑权后加载文档。'}</p><button disabled={busy} onClick={() => setAttempt(value => value + 1)}>重试打开</button></main>}
     {blocked && <div className="modal-backdrop"><section role="dialog" aria-modal="true" aria-label="退出前保护未保存内容"><h2>当前内容未能保存</h2><p>请先下载当前内容，或明确放弃修改后离开。浏览器关闭后无法恢复未保存草稿。</p><div className="actions"><button onClick={() => downloadContent(bridge.current?.currentContent() ?? localContent.current, file.name)}>下载当前内容</button><button onClick={() => setBlocked(false)}>继续编辑</button><button className="danger" disabled={busy} onClick={() => void leave(true)}>放弃修改并离开</button></div></section></div>}

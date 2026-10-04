@@ -35,6 +35,9 @@ try {
     filter: (path) => !['WEB-INF', 'META-INF'].includes(path.slice(source.length + 1).split('/')[0]),
   });
   await cp(join(root, 'scripts/editor-preconfig.js'), join(staging, 'js/PreConfig.js'));
+  await writeFile(join(staging, 'js/PostConfig.js'),
+    await readFile(join(source, 'js/PostConfig.js'), 'utf8') + '\n' +
+    await readFile(join(root, 'scripts/editor-postconfig.js'), 'utf8'));
   await cp(join(vendor, 'LICENSE'), join(staging, 'LICENSE'));
   const files = [];
   async function inventory(directory, prefix = '') {

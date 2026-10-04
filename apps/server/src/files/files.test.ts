@@ -46,6 +46,20 @@ test('并发租约申请只有一个窗口获得60秒有效凭据且管理员不
   expect(responses.find(response => response.statusCode === 409)!.json().error.code).toBe('FILE_OCCUPIED');
 });
 
+test('刷新凭据恢复租约并轮换token，旧页面和其他窗口不能使用新锁', async () => {
+  const { app, headers } = await setup();
+  const file = (await app.inject({ method: 'POST', url: '/api/files', headers, payload: { name: 'Reload.drawio' } })).json();
+  const url = `/api/files/${file.id}/edit-session`;
+  const lease = (await app.inject({ method: 'POST', url, headers, payload: { windowId: 'before-reload' } })).json();
+  const resumed = await app.inject({ method: 'POST', url, headers, payload: { windowId: 'after-reload', resumeLease: lease } });
+  expect(resumed.statusCode).toBe(201);
+  expect(resumed.json().leaseToken).not.toBe(lease.leaseToken);
+  expect((await app.inject({ method: 'DELETE', url, headers, payload: lease })).json().error.code).toBe('LEASE_LOST');
+  expect((await app.inject({ method: 'POST', url, headers, payload: { windowId: 'other-window', resumeLease: lease } })).json().error.code).toBe('LEASE_LOST');
+  expect((await app.inject({ method: 'POST', url, headers, payload: { windowId: 'other-window' } })).json().error.code).toBe('FILE_OCCUPIED');
+  expect((await app.inject({ method: 'PATCH', url, headers, payload: resumed.json() })).statusCode).toBe(200);
+});
+
 test('每10秒续租延长60秒，凭据绑定窗口，释放后其他窗口立即取得新锁', async () => {
   const { app, headers, clock } = await setup();
   const file = (await app.inject({ method: 'POST', url: '/api/files', headers, payload: { name: 'Renew.drawio' } })).json();

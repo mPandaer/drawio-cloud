@@ -44,7 +44,9 @@ export const createEditingModule: CreateEditingModule = (context, { identity, re
         const file = tx.db.prepare('SELECT owner_id FROM files WHERE id = ?').get(request.params.id) as { owner_id: string } | undefined;
         if (!file) throw new ApiError('NOT_FOUND');
         identity.authorizeFile(tx, actor, file.owner_id);
-        leases.requireUnoccupied(tx, request.params.id);
+        const occupied = tx.db.prepare('SELECT file_id FROM edit_leases WHERE file_id = ? AND expires_at > ?').get(request.params.id, context.clock.now());
+        if (occupied && request.body.resumeLease) leases.requireLease(tx, actor, request.params.id, request.body.resumeLease);
+        else leases.requireUnoccupied(tx, request.params.id);
         const leaseToken = randomBytes(32).toString('base64url');
         const expiresAt = context.clock.now() + 60_000;
         tx.db.prepare('INSERT INTO edit_leases(file_id, user_id, session_id, window_id, token_hash, expires_at) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(file_id) DO UPDATE SET user_id = excluded.user_id, session_id = excluded.session_id, window_id = excluded.window_id, token_hash = excluded.token_hash, expires_at = excluded.expires_at').run(request.params.id, actor.user.id, actor.sessionId, windowId, digest(leaseToken), expiresAt);

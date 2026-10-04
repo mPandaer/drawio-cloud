@@ -36,6 +36,18 @@ test('untrusted and malformed messages cannot load or change the document', () =
   expect({ messages: app.messages, content: app.bridge.currentContent(), statuses: app.statuses }).toEqual({ messages: [], content: '<mxfile/>', statuses: [] });
 });
 
+test('initial load preserves the document view and hides embedded save and exit buttons', () => {
+  const app = setup();
+  app.send({ event: 'init' });
+  expect(app.messages[0]).toEqual({
+    data: {
+      action: 'load', xml: '<mxfile/>', autosave: 1, saveAndExit: '0',
+      noSaveBtn: 1, noExitBtn: 1,
+    },
+    origin: 'https://draw.example',
+  });
+});
+
 test('changed content waits two seconds and stays unsaved until server confirmation', async () => {
   const app = setup(); app.send({ event: 'init' });
   app.send({ event: 'autosave', xml: '<mxfile>changed</mxfile>' });
@@ -277,5 +289,11 @@ test('editing after lease expiration retains the latest snapshot without clearin
 test('init loads the native document with autosave and an explicit target origin', () => {
   const app = setup();
   app.send({ event: 'init' });
-  expect(app.messages).toContainEqual({ data: { action: 'load', xml: '<mxfile/>', autosave: 1, saveAndExit: '0' }, origin: 'https://draw.example' });
+  expect(app.messages).toContainEqual({
+    data: {
+      action: 'load', xml: '<mxfile/>', autosave: 1, saveAndExit: '0',
+      noSaveBtn: 1, noExitBtn: 1,
+    },
+    origin: 'https://draw.example',
+  });
 });
