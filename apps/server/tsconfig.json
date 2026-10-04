@@ -1,0 +1,6 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": { "noEmit": false, "outDir": "dist", "rootDir": "../..", "types": ["node"], "sourceMap": true },
+  "include": ["src/**/*.ts", "../../packages/api-contract/src/**/*.ts"],
+  "exclude": ["src/**/*.test.ts"]
+}

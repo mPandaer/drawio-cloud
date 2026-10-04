@@ -1,0 +1,19 @@
+{
+  "name": "@drawio-cloud/server",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc --project tsconfig.json",
+    "start": "node dist/apps/server/src/cli.js"
+  },
+  "dependencies": {
+    "@fastify/cookie": "^11.1.2",
+    "argon2": "^0.45.1",
+    "better-sqlite3": "^13.0.3",
+    "fastify": "^5.12.5",
+    "saxes": "^6.0.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^9.6.0"
+  }
+}

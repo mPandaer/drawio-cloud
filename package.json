@@ -1,0 +1,24 @@
+{
+  "name": "drawio-cloud",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.11.0",
+  "engines": {
+    "node": ">=24.15.0 <25"
+  },
+  "scripts": {
+    "build:packages": "pnpm --filter @drawio-cloud/api-contract build && pnpm --filter @drawio-cloud/editor-bridge build",
+    "build:editor": "node scripts/build-editor.mjs",
+    "test": "pnpm build:packages && pnpm build:editor && pnpm --filter @drawio-cloud/server build && vitest run",
+    "typecheck": "tsc --noEmit",
+    "build": "pnpm build:packages && pnpm --filter @drawio-cloud/server build && pnpm --filter @drawio-cloud/web build && pnpm build:editor",
+    "dev:server": "node --env-file-if-exists=.env --import tsx apps/server/src/cli.ts",
+    "dev:web": "pnpm build:packages && pnpm build:editor && pnpm --filter @drawio-cloud/web dev"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.1",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.3"
+  }
+}

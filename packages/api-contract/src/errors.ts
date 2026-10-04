@@ -1,0 +1,27 @@
+export const errorDefinitions = {
+  REQUEST_TOO_LARGE: { status: 413, message: '请求内容超过大小限制，请减少请求内容。' },
+  UNSUPPORTED_MEDIA_TYPE: { status: 415, message: '请求内容类型不受支持，请使用 JSON。' },
+  INVALID_REQUEST: { status: 400, message: '请求格式不正确，请检查输入。' },
+  UNAUTHENTICATED: { status: 401, message: '登录已失效，请重新登录。' },
+  INVALID_CREDENTIALS: { status: 401, message: '用户名或密码不正确。' },
+  FORBIDDEN: { status: 403, message: '你没有权限执行此操作。' },
+  INVALID_ORIGIN: { status: 403, message: '请求来源无效，请从本站重新操作。' },
+  INVALID_CSRF: { status: 403, message: '请求凭据无效，请刷新页面。' },
+  ACCOUNT_DISABLED: { status: 403, message: '账号已停用，请联系管理员。' },
+  NOT_FOUND: { status: 404, message: '请求的资源不存在。' },
+  ALREADY_INITIALIZED: { status: 409, message: '管理员已初始化，注册入口已关闭。' },
+  USERNAME_EXISTS: { status: 409, message: '用户名已存在，请更换用户名。' },
+  LAST_ADMIN: { status: 409, message: '不能停用最后一个可用管理员。' },
+  NAME_EXISTS: { status: 409, message: '文件名已存在，请更换名称。' },
+  INVALID_NAME: { status: 400, message: '文件名不能为空或包含路径分隔符。' },
+  INVALID_DOCUMENT: { status: 400, message: '请选择有效的原生 .drawio 文档。' },
+  DOCUMENT_TOO_LARGE: { status: 413, message: '文档超过大小限制，原文件保持不变，请下载当前内容。' },
+  FILE_OCCUPIED: { status: 409, message: '该文件已在另一个窗口打开，目前只支持单窗口编辑。' },
+  LEASE_LOST: { status: 409, message: '编辑锁已失效，保存已暂停，请下载当前内容。' },
+  REVISION_CONFLICT: { status: 409, message: '文件版本冲突，请重新加载或另存为新文件。' },
+  RATE_LIMITED: { status: 429, message: '操作过于频繁，请稍后重试。' },
+  STORAGE_FAILURE: { status: 503, message: '存储失败，请稍后重试并下载当前内容。' },
+  INTERNAL_ERROR: { status: 500, message: '服务暂时出现错误，请稍后重试。' },
+} as const;
+export type ErrorCode = keyof typeof errorDefinitions;
+export interface ApiErrorResponse { error: { code: ErrorCode; message: string } }

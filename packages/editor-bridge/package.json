@@ -1,0 +1,6 @@
+{
+  "name": "@drawio-cloud/editor-bridge", "private": true, "type": "module",
+  "exports": { "types": "./src/index.ts", "import": "./dist/index.js" },
+  "scripts": { "build": "tsc --ignoreConfig --target ES2022 --module NodeNext --moduleResolution NodeNext --strict --skipLibCheck --rootDir src --outDir dist src/index.ts" },
+  "dependencies": { "@drawio-cloud/api-contract": "workspace:*" }
+}
