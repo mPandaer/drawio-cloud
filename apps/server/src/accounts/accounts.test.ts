@@ -34,6 +34,26 @@ async function setup(publicOrigin = origin, authorityProbe = false, env: NodeJS.
 }
 const admin = { username: ' 管理员 ', password: 'admin-password-123' };
 
+test('明确的多入口白名单允许登录与修改，仍拒绝未知来源及错误CSRF', async () => {
+  const alternatives = ['http://server.local.com:6768', 'http://100.109.38.54:6768'];
+  const { app } = await setup(origin, false, { ALLOWED_ORIGINS: alternatives.join(',') });
+  await bootstrap(app);
+  for (const entry of [origin, ...alternatives]) {
+    const session = await login(app, admin, entry);
+    expect(session.response.statusCode).toBe(200);
+    const headers = { cookie: session.cookie, origin: entry, 'x-csrf-token': 'wrong' };
+    expect((await app.inject({ method: 'POST', url: '/api/auth/logout', headers })).json().error.code).toBe('INVALID_CSRF');
+    headers['x-csrf-token'] = session.auth.csrfToken;
+    expect((await app.inject({ method: 'POST', url: '/api/auth/logout', headers: { ...headers, origin: 'http://evil.example' } })).json().error.code).toBe('INVALID_ORIGIN');
+    expect((await app.inject({ method: 'POST', url: '/api/auth/logout', headers })).statusCode).toBe(204);
+  }
+  expect((await login(app, admin, 'http://evil.example')).response.statusCode).toBe(403);
+});
+
+test.each(['*', 'http://good.example,', 'https://good.example', 'http://good.example/path', 'http://user:pass@good.example'])('非法入口白名单 %s 拒绝配置', value => {
+  expect(() => readConfig({ DATA_DIR: '/tmp/test', PUBLIC_ORIGIN: origin, ALLOWED_ORIGINS: value })).toThrow('ALLOWED_ORIGINS');
+});
+
 test('可信代理后的客户端独立限速，未受信任来源不能用XFF绕过', async () => {
   const { app } = await setup(origin, false, { TRUSTED_PROXIES: '127.0.0.1/32' });
   const attempt = (remoteAddress: string, forwarded: string) => app.inject({ method: 'POST', url: '/api/bootstrap', remoteAddress,
