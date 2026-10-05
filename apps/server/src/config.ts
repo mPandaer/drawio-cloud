@@ -4,6 +4,7 @@ import { isIP } from 'node:net';
 export interface ServerConfig {
   dataDir: string;
   publicOrigin: string;
+  allowedOrigins: string[];
   cookieSecure: boolean;
   maxDocumentBytes: number;
   bodyLimit: number;
@@ -30,6 +31,18 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
   if (!['http', 'https'].includes(cookieMode) || `${cookieMode}:` !== origin.protocol) {
     throw new ConfigurationError('COOKIE_MODE');
   }
+  const allowedOrigins = [origin.origin];
+  if (env.ALLOWED_ORIGINS !== undefined) {
+    for (const value of env.ALLOWED_ORIGINS.split(',')) {
+      let additional: URL;
+      try { additional = new URL(value.trim()); }
+      catch { throw new ConfigurationError('ALLOWED_ORIGINS'); }
+      if (additional.protocol !== origin.protocol || additional.username || additional.password || additional.pathname !== '/' || additional.search || additional.hash) {
+        throw new ConfigurationError('ALLOWED_ORIGINS');
+      }
+      if (!allowedOrigins.includes(additional.origin)) allowedOrigins.push(additional.origin);
+    }
+  }
   const portRaw = env.PORT ?? '3000';
   const port = Number(portRaw);
   if (!/^\d+$/.test(portRaw) || !Number.isInteger(port) || port < 1 || port > 65535) throw new ConfigurationError('PORT');
@@ -46,7 +59,7 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
     }
   }
   return {
-    dataDir, publicOrigin: origin.origin,
+    dataDir, publicOrigin: origin.origin, allowedOrigins,
     cookieSecure: cookieMode === 'https', maxDocumentBytes, bodyLimit: maxDocumentBytes * 6 + 65536,
     host, port, trustedProxies,
   };

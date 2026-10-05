@@ -30,7 +30,7 @@ export const createAccountsModule: CreateAccountsModule = (context, options = {}
     entry.count++;
     attempts.set(key, entry);
   };
-  const requireOrigin = (origin?: string) => { if (origin !== context.config.publicOrigin) throw new ApiError('INVALID_ORIGIN'); };
+  const requireOrigin = (origin?: string) => { if (!origin || !context.config.allowedOrigins.includes(origin)) throw new ApiError('INVALID_ORIGIN'); };
   const credentials = (body: unknown): CredentialsRequest => {
     if (!body || typeof body !== 'object') throw new ApiError('INVALID_REQUEST');
     const { username, password } = body as CredentialsRequest;

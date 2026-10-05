@@ -13,6 +13,7 @@ services:
     environment:
       DATA_DIR: /data
       PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:?请设置浏览器访问的外部入口，例如 http://192.168.1.10:8080}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-${PUBLIC_ORIGIN}}
       MAX_DOCUMENT_BYTES: ${MAX_DOCUMENT_BYTES:-20971520}
       COOKIE_MODE: ${COOKIE_MODE:-http}
       HOST: 127.0.0.1
